@@ -43,10 +43,10 @@ class AuthService {
           .timeout(ApiConfig.requestTimeout);
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final success = body["success"] == true;
       final message = body["message"] as String? ?? "Login request completed";
 
-      if (!success || response.statusCode != 200) {
+      // Backend returns HTTP 200 with token on success (no 'success' field)
+      if (response.statusCode != 200) {
         return AuthResult(success: false, message: message);
       }
 
@@ -54,9 +54,11 @@ class AuthService {
       final userJson = body["user"] as Map<String, dynamic>?;
       final user = userJson != null ? UserModel.fromJson(userJson) : null;
 
-      if (token != null && token.isNotEmpty) {
-        await _saveToken(token);
+      if (token == null || token.isEmpty) {
+        return AuthResult(success: false, message: message);
       }
+
+      await _saveToken(token);
 
       return AuthResult(
         success: true,
@@ -93,11 +95,11 @@ class AuthService {
           .timeout(ApiConfig.requestTimeout);
 
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final success = body["success"] == true;
       final message =
           body["message"] as String? ?? "Registration request completed";
 
-      if (!success || response.statusCode != 201) {
+      // Backend returns HTTP 200 on success (no 'success' field)
+      if (response.statusCode != 200 && response.statusCode != 201) {
         return AuthResult(success: false, message: message);
       }
 

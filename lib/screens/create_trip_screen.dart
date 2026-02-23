@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:intl/intl.dart";
+import "package:waygo_app/services/trip_service.dart"; 
 import "package:waygo_app/widgets/custom_button.dart";
 
 class CreateTripScreen extends StatefulWidget {
@@ -12,6 +13,7 @@ class CreateTripScreen extends StatefulWidget {
 class _CreateTripScreenState extends State<CreateTripScreen> {
   final _formKey = GlobalKey<FormState>();
   final _tripNameController = TextEditingController();
+  final _tripService = const TripService(); 
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -24,9 +26,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   }
 
   String _formatDate(DateTime? date) {
-    if (date == null) {
-      return "Select date";
-    }
+    if (date == null) return "Select date";
     return DateFormat("dd MMM yyyy").format(date);
   }
 
@@ -43,70 +43,87 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(
-              context,
-            ).colorScheme.copyWith(primary: const Color(0xFF2563EB)),
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: const Color(0xFF2563EB),
+                ),
           ),
           child: child!,
         );
       },
     );
 
-    if (picked == null) {
-      return;
-    }
-
-    setState(() {
-      if (isStart) {
-        _startDate = picked;
-        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-          _endDate = _startDate;
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startDate = picked;
+          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+            _endDate = _startDate;
+          }
+        } else {
+          _endDate = picked;
         }
-      } else {
-        _endDate = picked;
-      }
-    });
+      });
+    }
   }
 
   Future<void> _createTrip() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
+    // ફોર્મ વેલિડેશન ચેક
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    // તારીખ સિલેક્ટ કરી છે કે નહીં તે ચેક
     if (_startDate == null || _endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select start and end dates")),
-      );
+      _showSnackBar("Please select both start and end dates");
       return;
     }
 
+    // એન્ડ ડેટ સ્ટાર્ટ ડેટ પહેલા ના હોવી જોઈએ
     if (_endDate!.isBefore(_startDate!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("End date cannot be before start date")),
-      );
+      _showSnackBar("End date cannot be before start date");
       return;
     }
 
     setState(() => _isCreating = true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) {
-      return;
-    }
 
-    Navigator.of(context).pop({
-      "name": _tripNameController.text.trim(),
-      "startDate": _startDate!,
-      "endDate": _endDate!,
-    });
+    try {
+      // Backend API માં ડેટા મોકલો
+      // નોંધ: હાલમાં userId: 1 વાપરીએ છીએ જે pgAdmin માં ચેક કર્યું હતું
+      final success = await _tripService.createTrip(
+        userId: 1, 
+        name: _tripNameController.text.trim(),
+        startDate: _startDate!,
+        endDate: _endDate!,
+      );
+
+      if (!mounted) return;
+      setState(() => _isCreating = false);
+
+      if (success) {
+        _showSnackBar("Trip created successfully in database! ✅");
+        // ડેટાબેઝમાં સેવ થયા પછી ડેશબોર્ડ પર પાછા જાઓ
+        Navigator.of(context).pop(true); 
+      } else {
+        _showSnackBar("Failed to create trip. Check your server connection.");
+      }
+    } catch (e) {
+      setState(() => _isCreating = false);
+      _showSnackBar("An unexpected error occurred.");
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF061026), // ડાર્ક થીમ મુજબ બેકગ્રાઉન્ડ
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("Create New Trip"),
+        title: const Text("Plan New Journey"),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -120,38 +137,38 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
                 children: [
                   const Text(
                     "Trip Details",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   TextFormField(
                     controller: _tripNameController,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      labelText: "Trip name",
-                      hintText: "Bali Retreat 2026",
+                      labelText: "Trip Name",
+                      hintText: "E.g. Manali Adventure 2026",
+                      labelStyle: TextStyle(color: Color(0xFF94A3B8)),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF1E293B))),
                     ),
                     validator: (value) {
-                      final name = value?.trim() ?? "";
-                      if (name.length < 3) {
-                        return "Trip name must be at least 3 characters";
-                      }
+                      if ((value?.trim() ?? "").length < 3) return "Name is too short";
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   _DateTile(
-                    label: "Start date",
+                    label: "Start Date",
                     value: _formatDate(_startDate),
                     onTap: () => _pickDate(true),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   _DateTile(
-                    label: "End date",
+                    label: "End Date",
                     value: _formatDate(_endDate),
                     onTap: () => _pickDate(false),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 40),
                   CustomButton(
-                    text: "Create Trip",
+                    text: "Save Trip to Database",
                     isLoading: _isCreating,
                     onPressed: _createTrip,
                   ),
@@ -166,53 +183,36 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
 }
 
 class _DateTile extends StatelessWidget {
-  const _DateTile({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
   final String label;
   final String value;
   final VoidCallback onTap;
+
+  const _DateTile({required this.label, required this.value, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: const Color(0xFF12203D),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           child: Row(
             children: [
-              const Icon(Icons.calendar_month_rounded, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF94A3B8),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      value,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+              const Icon(Icons.calendar_today_rounded, size: 22, color: Color(0xFF2563EB)),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                  const SizedBox(height: 4),
+                  Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
               ),
-              const Icon(Icons.keyboard_arrow_down_rounded),
+              const Spacer(),
+              const Icon(Icons.edit_calendar_rounded, color: Colors.white24, size: 20),
             ],
           ),
         ),

@@ -1,5 +1,6 @@
-import "package:flutter/material.dart";
-import "package:waygo_app/screens/login_screen.dart";
+import 'package:flutter/material.dart';
+import 'package:waygo_app/config/app_theme.dart';
+import 'package:waygo_app/screens/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -8,30 +9,37 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  static const Duration _delay = Duration(seconds: 2);
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _progress;
 
   @override
   void initState() {
     super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _progress = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+    _ctrl.forward();
     _redirect();
   }
 
-  Future<void> _redirect() async {
-    await Future<void>.delayed(_delay);
-    if (!mounted) {
-      return;
-    }
-
-    Navigator.of(context).pushReplacement(_fadeRoute(const LoginScreen()));
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
-  Route<void> _fadeRoute(Widget page) {
-    return PageRouteBuilder<void>(
-      transitionDuration: const Duration(milliseconds: 450),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return FadeTransition(opacity: animation, child: page);
-      },
+  Future<void> _redirect() async {
+    await Future<void>.delayed(const Duration(milliseconds: 2400));
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        transitionDuration: const Duration(milliseconds: 600),
+        pageBuilder: (ctx, animation, _) =>
+            FadeTransition(opacity: animation, child: const LoginScreen()),
+      ),
     );
   }
 
@@ -40,53 +48,107 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
+            colors: [Color(0xFF040D1A), Color(0xFF061026), Color(0xFF0C2040)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF081126), Color(0xFF13203F)],
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF14B8A6)],
+          children: [
+            const Spacer(flex: 3),
+            // Globe icon with glow rings
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer glow ring
+                Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: kTeal.withValues(alpha: 0.15), width: 1),
+                  ),
                 ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x552563EB),
-                    blurRadius: 28,
-                    offset: Offset(0, 14),
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: kTeal.withValues(alpha: 0.25), width: 1),
+                  ),
+                ),
+                // Main icon container
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF0D2040),
+                    border: Border.all(color: kTeal.withValues(alpha: 0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: kTeal.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.public_rounded, color: kWhite, size: 44),
+                ),
+              ],
+            ),
+            const SizedBox(height: 40),
+            // WayGo title
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: 1),
+                children: [
+                  TextSpan(text: 'Way', style: TextStyle(color: kWhite)),
+                  TextSpan(text: 'Go', style: TextStyle(color: kTeal)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'YOUR PREMIUM TRAVEL COMPANION',
+              style: TextStyle(
+                fontSize: 11,
+                letterSpacing: 2.5,
+                color: kSlate,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(flex: 2),
+            // Animated loading bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 60),
+              child: Column(
+                children: [
+                  AnimatedBuilder(
+                    animation: _progress,
+                    builder: (ctx, child) => ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _progress.value,
+                        minHeight: 3,
+                        backgroundColor: kNavy3,
+                        valueColor: const AlwaysStoppedAnimation<Color>(kTeal),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Loading Experience...',
+                    style: TextStyle(color: kSlate, fontSize: 12),
                   ),
                 ],
               ),
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Icon(
-                  Icons.explore_rounded,
-                  color: Colors.white,
-                  size: 54,
-                ),
-              ),
             ),
-            SizedBox(height: 22),
-            Text(
-              "WayGo",
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              "Plan smarter journeys",
-              style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-            ),
+            const SizedBox(height: 48),
           ],
         ),
       ),
