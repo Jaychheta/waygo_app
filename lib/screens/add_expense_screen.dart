@@ -170,7 +170,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
             decoration: BoxDecoration(
               color: kNavy2,
               borderRadius: BorderRadius.circular(kRadius12),
-              border: Border.all(color: kWhite.withValues(alpha: 0.08)),
+              border: Border.all(color: kWhite.withOpacity(0.15)),
             ),
             child: const Icon(Icons.arrow_back_rounded, color: kWhite, size: 20),
           ),
@@ -214,7 +214,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
           decoration: BoxDecoration(
             color: kNavy2,
             borderRadius: BorderRadius.circular(kRadius),
-            border: Border.all(color: kWhite.withValues(alpha: 0.08)),
+            border: Border.all(color: kWhite.withOpacity(0.15)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -271,7 +271,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
           decoration: BoxDecoration(
             color: kNavy2,
             borderRadius: BorderRadius.circular(kRadius12),
-            border: Border.all(color: kWhite.withValues(alpha: 0.08)),
+            border: Border.all(color: kWhite.withOpacity(0.15)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -291,7 +291,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.15),
+                          color: color.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(_categoryIcons[cat], color: color, size: 16),
@@ -341,7 +341,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(kRadius12),
                 borderSide:
-                    BorderSide(color: kWhite.withValues(alpha: 0.08))),
+                    BorderSide(color: kWhite.withOpacity(0.15))),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(kRadius12),
                 borderSide: const BorderSide(color: kTeal, width: 1.5)),
@@ -364,7 +364,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
           decoration: BoxDecoration(
             color: kNavy2,
             borderRadius: BorderRadius.circular(kRadius12),
-            border: Border.all(color: kTeal.withValues(alpha: 0.4)),
+            border: Border.all(color: kTeal.withOpacity(0.15)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -404,7 +404,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                    color: kTeal.withValues(alpha: 0.15),
+                    color: kTeal.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20)),
                 child: const Text('Paying',
                     style: TextStyle(
@@ -454,7 +454,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: kTeal.withValues(alpha: 0.15),
+                color: kTeal.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -470,7 +470,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
           decoration: BoxDecoration(
             color: kNavy2,
             borderRadius: BorderRadius.circular(kRadius),
-            border: Border.all(color: kWhite.withValues(alpha: 0.06)),
+            border: Border.all(color: kWhite.withOpacity(0.15)),
           ),
           child: Column(
             children: others.asMap().entries.map((entry) {
@@ -511,8 +511,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                                 color: kNavy3,
                                 border: Border.all(
                                     color: checked
-                                        ? kTeal.withValues(alpha: 0.5)
-                                        : kWhite.withValues(alpha: 0.1)),
+                                        ? kTeal.withOpacity(0.15)
+                                        : kWhite.withOpacity(0.15)),
                               ),
                               child: Center(
                                 child: Text(initial,
@@ -548,7 +548,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                                 border: Border.all(
                                     color: checked
                                         ? kTeal
-                                        : kSlate.withValues(alpha: 0.4),
+                                        : kSlate.withOpacity(0.15),
                                     width: 2),
                               ),
                               child: checked
@@ -564,7 +564,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                   if (!isLast)
                     Divider(
                         height: 1,
-                        color: kWhite.withValues(alpha: 0.05),
+                        color: kWhite.withOpacity(0.15),
                         indent: 70),
                 ],
               );
@@ -593,7 +593,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                   ? []
                   : [
                       BoxShadow(
-                          color: kTeal.withValues(alpha: 0.35),
+                          color: kTeal.withOpacity(0.15),
                           blurRadius: 20,
                           offset: const Offset(0, 8))
                     ],

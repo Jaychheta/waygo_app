@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
                   height: 160,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: kTeal.withValues(alpha: 0.15), width: 1),
+                    border: Border.all(color: kTeal.withOpacity(0.15), width: 1),
                   ),
                 ),
                 Container(
@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
                   height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: kTeal.withValues(alpha: 0.25), width: 1),
+                    border: Border.all(color: kTeal.withOpacity(0.15), width: 1),
                   ),
                 ),
                 // Main icon container
@@ -88,10 +88,10 @@ class _SplashScreenState extends State<SplashScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: const Color(0xFF0D2040),
-                    border: Border.all(color: kTeal.withValues(alpha: 0.4), width: 1.5),
+                    border: Border.all(color: kTeal.withOpacity(0.4), width: 1.5),
                     boxShadow: [
                       BoxShadow(
-                        color: kTeal.withValues(alpha: 0.3),
+                        color: kTeal.withOpacity(0.35),
                         blurRadius: 30,
                         spreadRadius: 5,
                       ),

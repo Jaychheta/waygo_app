@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/memory_model.dart';
@@ -10,11 +12,15 @@ class MemoryService {
     try {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/memories/$userId'),
-      );
+      ).timeout(ApiConfig.requestTimeout);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((e) => MemoryModel.fromJson(e)).toList();
       }
+      return [];
+    } on TimeoutException {
+      return [];
+    } on SocketException {
       return [];
     } catch (_) {
       return [];
@@ -39,8 +45,12 @@ class MemoryService {
         imageBytes,
         filename: fileName,
       ));
-      final response = await request.send();
+      final response = await request.send().timeout(ApiConfig.requestTimeout);
       return response.statusCode == 200 || response.statusCode == 201;
+    } on TimeoutException {
+      return false;
+    } on SocketException {
+      return false;
     } catch (_) {
       return false;
     }

@@ -67,7 +67,7 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
             children: [
               Container(
                 width: 40, height: 4,
-                decoration: BoxDecoration(color: kSlate.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: kSlate.withOpacity(0.15), borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 20),
               const Text('Add Memory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kWhite)),
@@ -106,7 +106,7 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
         decoration: BoxDecoration(
           color: kNavy3,
           borderRadius: BorderRadius.circular(kRadius16),
-          border: Border.all(color: kWhite.withValues(alpha: 0.08)),
+          border: Border.all(color: kWhite.withOpacity(0.15)),
         ),
         child: Column(
           children: [
@@ -149,11 +149,13 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
             ),
       floatingActionButton: _isUploading
           ? FloatingActionButton(
+              heroTag: 'memory_vault_fab',
               onPressed: null,
               backgroundColor: kTeal,
               child: const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: kWhite, strokeWidth: 2.5)),
             )
           : FloatingActionButton.extended(
+              heroTag: 'memory_vault_fab',
               onPressed: _showSourceSheet,
               backgroundColor: kTeal,
               icon: const Icon(Icons.add_photo_alternate_rounded, color: kWhite),
@@ -172,9 +174,9 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
             Container(
               width: 100, height: 100,
               decoration: BoxDecoration(
-                color: kTeal.withValues(alpha: 0.1),
+                color: kTeal.withOpacity(0.15),
                 shape: BoxShape.circle,
-                border: Border.all(color: kTeal.withValues(alpha: 0.3), width: 2),
+                border: Border.all(color: kTeal.withOpacity(0.15), width: 2),
               ),
               child: const Icon(Icons.photo_library_rounded, color: kTeal, size: 48),
             ),
@@ -192,7 +194,7 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                 decoration: BoxDecoration(gradient: kTealGradient, borderRadius: BorderRadius.circular(kRadius),
-                  boxShadow: [BoxShadow(color: kTeal.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 8))]),
+                  boxShadow: [BoxShadow(color: kTeal.withOpacity(0.15), blurRadius: 18, offset: const Offset(0, 8))]),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -226,7 +228,7 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.15)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),

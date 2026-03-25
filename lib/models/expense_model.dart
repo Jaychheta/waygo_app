@@ -1,3 +1,11 @@
+/// Safely parses [v] (num or String) to double, defaulting to 0.
+double _safeAmount(dynamic v) {
+  if (v == null) return 0.0;
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0.0;
+  return 0.0;
+}
+
 class ExpenseModel {
   final String id;
   final String title;
@@ -20,7 +28,7 @@ class ExpenseModel {
   factory ExpenseModel.fromJson(Map<String, dynamic> json) => ExpenseModel(
         id: json['id']?.toString() ?? '',
         title: json['title'] ?? '',
-        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        amount: _safeAmount(json['amount']),
         paidBy: json['paid_by'] ?? '',
         splitAmong: List<String>.from(json['split_among'] ?? []),
         category: json['category'] ?? 'other',
@@ -47,6 +55,6 @@ class SettlementModel {
   factory SettlementModel.fromJson(Map<String, dynamic> json) => SettlementModel(
         from: json['from'] ?? '',
         to: json['to'] ?? '',
-        amount: (json['amount'] as num?)?.toDouble() ?? 0,
+        amount: _safeAmount(json['amount']),
       );
 }

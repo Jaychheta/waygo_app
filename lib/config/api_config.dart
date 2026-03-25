@@ -1,25 +1,37 @@
-import 'package:flutter/foundation.dart'; // kIsWeb માટે આ જરૂરી છે
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConfig {
-  // આપોઆપ નક્કી કરશે કે કયો URL વાપરવો
+  // ─────────────────────────────────────────────────────────────────────────
+  // ENVIRONMENT TOGGLE
+  // Set to `true` before deploying to production (Render).
+  // Set to `false` for local development.
+  // ─────────────────────────────────────────────────────────────────────────
+  static const bool isProduction = false;
+
+  // ─── Raw base URLs ───────────────────────────────────────────────────────
+  static const String _productionUrl  = 'https://waygo-backend-mhwb.onrender.com/api';
+  static const String _localUrlWeb    = 'http://localhost:3000/api';   // browser / web-server
+  static const String _localUrlMobile = 'http://10.0.2.2:3000/api';   // Android emulator
+
+  /// Automatically resolves to the correct base URL based on the toggle and
+  /// the current platform. Uses [kIsWeb] (flutter/foundation) — safe on Web,
+  /// Android, iOS, and Desktop without importing dart:io.
   static String get baseUrl {
-    if (kIsWeb) {
-      return "http://localhost:3000/api"; // Chrome માટે
-    } else {
-      return "http://10.0.2.2:3000/api"; // Android Emulator માટે
-    }
+    if (isProduction) return _productionUrl;
+    return kIsWeb ? _localUrlWeb : _localUrlMobile;
   }
 
-  // Endpoints
-  static const String loginEndpoint = "/auth/login";
-  static const String registerEndpoint = "/auth/register";
+  // ─── Endpoints ───────────────────────────────────────────────────────────
+  static const String loginEndpoint    = '/auth/login';
+  static const String registerEndpoint = '/auth/register';
 
-  // Keys
-  static const String tokenKey = "auth_token";
+  // ─── Keys ────────────────────────────────────────────────────────────────
+  static const String tokenKey = 'auth_token';
 
-  // Timeout for AI generation endpoints (Gemini can take 15-30 s)
+  // ─── Timeouts ────────────────────────────────────────────────────────────
+  /// AI generation endpoints (Gemini can take 15–30 s)
   static const Duration aiTimeout = Duration(seconds: 60);
 
-  // Timeout for regular REST calls
-  static const Duration requestTimeout = Duration(seconds: 20);
+  /// Regular REST calls — 60 s covers Render free-tier cold start
+  static const Duration requestTimeout = Duration(seconds: 60);
 }

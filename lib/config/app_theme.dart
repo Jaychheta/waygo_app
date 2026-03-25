@@ -90,7 +90,7 @@ BoxDecoration glowDecor({Color glowColor = kTeal, double radius = kRadius}) => B
   gradient: kTealGradient,
   boxShadow: [
     BoxShadow(
-      color: glowColor.withValues(alpha: 0.35),
+      color: glowColor.withOpacity(0.35),
       blurRadius: 20,
       offset: const Offset(0, 8),
     ),

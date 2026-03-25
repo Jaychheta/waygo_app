@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: BoxShape.circle,
                         color: const Color(0xFF0D2B1E),
                         border: Border.all(
-                          color: kTeal.withValues(alpha: 0.3),
+                          color: kTeal.withOpacity(0.3),
                           width: 1.5,
                         ),
                       ),
@@ -197,18 +197,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     children: [
                       Expanded(
-                          child: Divider(color: kWhite.withValues(alpha: 0.1))),
+                          child: Divider(color: kWhite.withOpacity(0.1))),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Text(
                           'Or continue with',
                           style: TextStyle(
-                              color: kSlate.withValues(alpha: 0.8),
+                              color: kSlate.withOpacity(0.8),
                               fontSize: 12),
                         ),
                       ),
                       Expanded(
-                          child: Divider(color: kWhite.withValues(alpha: 0.1))),
+                          child: Divider(color: kWhite.withOpacity(0.1))),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -296,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(50),
-          borderSide: BorderSide(color: kWhite.withValues(alpha: 0.08)),
+          borderSide: BorderSide(color: kWhite.withOpacity(0.08)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(50),
@@ -318,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF0C1E2E),
         borderRadius: BorderRadius.circular(50),
-        border: Border.all(color: kWhite.withValues(alpha: 0.12)),
+        border: Border.all(color: kWhite.withOpacity(0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
@@ -25,8 +27,12 @@ class ExpenseService {
           'description': description,
           'split_with': splitWith,
         }),
-      );
+      ).timeout(ApiConfig.requestTimeout);
       return response.statusCode == 200 || response.statusCode == 201;
+    } on TimeoutException {
+      return false;
+    } on SocketException {
+      return false;
     } catch (e) {
       return false;
     }
@@ -37,10 +43,14 @@ class ExpenseService {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/expenses?trip_id=$tripId'),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(ApiConfig.requestTimeout);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as List<dynamic>;
       }
+      return [];
+    } on TimeoutException {
+      return [];
+    } on SocketException {
       return [];
     } catch (e) {
       return [];
@@ -52,10 +62,14 @@ class ExpenseService {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/expenses/settlements?trip_id=$tripId'),
         headers: {'Content-Type': 'application/json'},
-      );
+      ).timeout(ApiConfig.requestTimeout);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as List<dynamic>;
       }
+      return [];
+    } on TimeoutException {
+      return [];
+    } on SocketException {
       return [];
     } catch (e) {
       return [];

@@ -51,7 +51,7 @@ class CustomButton extends StatelessWidget {
             ? []
             : [
                 BoxShadow(
-                  color: (color ?? kTeal).withValues(alpha: 0.40),
+                  color: (color ?? kTeal).withOpacity(0.40),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -66,7 +66,7 @@ class CustomButton extends StatelessWidget {
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
             foregroundColor: textColor ?? kWhite,
-            disabledForegroundColor: kWhite.withValues(alpha: 0.6),
+            disabledForegroundColor: kWhite.withOpacity(0.6),
             disabledBackgroundColor: Colors.transparent,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadius)),
           ),

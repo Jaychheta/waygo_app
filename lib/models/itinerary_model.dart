@@ -1,3 +1,11 @@
+/// Safely parses a value that may be a [num] or a [String] to [double].
+double _parseDouble(dynamic value, double fallback) {
+  if (value == null) return fallback;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
 class Activity {
   final String time;
   final String name;
@@ -6,6 +14,7 @@ class Activity {
   final double rating;
   final String imageUrl;
   final bool isPopular;
+  final String category;
 
   const Activity({
     required this.time,
@@ -15,16 +24,29 @@ class Activity {
     required this.rating,
     required this.imageUrl,
     this.isPopular = false,
+    this.category = 'General',
   });
+
+  Map<String, dynamic> toJson() => {
+    'time': time,
+    'name': name,
+    'location': location,
+    'description': description,
+    'rating': rating,
+    'image_url': imageUrl,
+    'is_popular': isPopular,
+    'category': category,
+  };
 
   factory Activity.fromJson(Map<String, dynamic> json) => Activity(
         time: json['time']?.toString() ?? '',
         name: json['name']?.toString() ?? json['placeName']?.toString() ?? '',
         location: json['location']?.toString() ?? '',
         description: json['description']?.toString() ?? '',
-        rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
+        rating: _parseDouble(json['rating'], 4.5),
         imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString() ?? '',
         isPopular: json['is_popular'] as bool? ?? json['isPopular'] as bool? ?? false,
+        category: json['category']?.toString() ?? 'General',
       );
 }
 
@@ -34,6 +56,12 @@ class DayPlan {
   final List<Activity> activities;
 
   const DayPlan({required this.day, required this.theme, required this.activities});
+
+  Map<String, dynamic> toJson() => {
+    'day': day,
+    'theme': theme,
+    'places': activities.map((a) => a.toJson()).toList(),
+  };
 
   factory DayPlan.fromJson(Map<String, dynamic> json) => DayPlan(
         day: (json['day'] as num?)?.toInt() ?? 0,
