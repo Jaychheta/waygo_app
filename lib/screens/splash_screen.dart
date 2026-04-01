@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:waygo_app/config/app_theme.dart';
-import 'package:waygo_app/screens/login_screen.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../config/app_theme.dart';
+import 'login_screen.dart';
+import 'dashboard_screen.dart';
+import '../services/auth_service.dart';
+import '../widgets/page_transitions.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -9,148 +13,157 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _progress;
-
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 2));
-    _progress = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
-    _ctrl.forward();
-    _redirect();
+    _startSequence();
   }
 
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _redirect() async {
-    await Future<void>.delayed(const Duration(milliseconds: 2400));
+  Future<void> _startSequence() async {
+    await Future.delayed(2600.ms);
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (ctx, animation, _) =>
-            FadeTransition(opacity: animation, child: const LoginScreen()),
-      ),
-    );
+    
+    // Check for existing session (Auto-Login Excellence)
+    final token = await const AuthService().getToken();
+    final name = await const AuthService().getUserName();
+    
+    if (!mounted) return;
+
+    if (token != null && token.isNotEmpty) {
+      // Direct jump to Dashboard for returning travelers
+      Navigator.of(context).pushReplacement(
+        PageTransitions.slideUp(DashboardScreen(userName: name)),
+      );
+    } else {
+      // Luxury transition to Login for new adventurers
+      Navigator.of(context).pushReplacement(
+        PageTransitions.fadeScale(const LoginScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF040D1A), Color(0xFF061026), Color(0xFF0C2040)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      backgroundColor: kSurface,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Radiant Background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.2,
+                colors: [
+                  Color(0xFF1A1A2E),
+                  kSurface,
+                ],
+              ),
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(flex: 3),
-            // Globe icon with glow rings
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                // Outer glow ring
-                Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: kTeal.withOpacity(0.15), width: 1),
-                  ),
-                ),
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: kTeal.withOpacity(0.15), width: 1),
-                  ),
-                ),
-                // Main icon container
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF0D2040),
-                    border: Border.all(color: kTeal.withOpacity(0.4), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: kTeal.withOpacity(0.35),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.public_rounded, color: kWhite, size: 44),
-                ),
-              ],
-            ),
-            const SizedBox(height: 40),
-            // WayGo title
-            RichText(
-              text: const TextSpan(
-                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: 1),
-                children: [
-                  TextSpan(text: 'Way', style: TextStyle(color: kWhite)),
-                  TextSpan(text: 'Go', style: TextStyle(color: kTeal)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'YOUR PREMIUM TRAVEL COMPANION',
-              style: TextStyle(
-                fontSize: 11,
-                letterSpacing: 2.5,
-                color: kSlate,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const Spacer(flex: 2),
-            // Animated loading bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 60),
-              child: Column(
-                children: [
-                  AnimatedBuilder(
-                    animation: _progress,
-                    builder: (ctx, child) => ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: _progress.value,
-                        minHeight: 3,
-                        backgroundColor: kNavy3,
-                        valueColor: const AlwaysStoppedAnimation<Color>(kTeal),
-                      ),
+
+          // 2. Animated Content
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 3),
+              
+              // Animated Logo / Icon
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: kSurface,
+                  border: Border.all(color: kTeal.withValues(alpha: 0.2), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kTeal.withValues(alpha: 0.1),
+                      blurRadius: 40,
+                      spreadRadius: 10,
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Loading Experience...',
-                    style: TextStyle(color: kSlate, fontSize: 12),
-                  ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: kTeal,
+                  size: 48,
+                ),
+              )
+              .animate()
+              .scale(
+                duration: 800.ms,
+                curve: Curves.easeOutBack,
+                begin: const Offset(0, 0),
+              )
+              .shimmer(delay: 800.ms, duration: 1200.ms, color: kWhite.withValues(alpha: 0.2))
+              .blur(begin: const Offset(10, 10), end: const Offset(0, 0), duration: 600.ms),
+
+              const SizedBox(height: 32),
+
+              // Waygo Branding
+              Column(
+                children: [
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                        color: kWhite,
+                      ),
+                      children: [
+                        TextSpan(text: 'Way'),
+                        TextSpan(
+                          text: 'go.',
+                          style: TextStyle(color: kTeal),
+                        ),
+                      ],
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(delay: 400.ms, duration: 800.ms)
+                  .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCirc),
+
+                  const SizedBox(height: 12),
+                  
+                  Text(
+                    'THE LUXURY CONCIERGE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.w600,
+                      color: kWhite.withValues(alpha: 0.4),
+                    ),
+                  )
+                  .animate()
+                  .fadeIn(delay: 800.ms, duration: 1000.ms)
+                  .blur(begin: const Offset(5, 5), end: const Offset(0, 0)),
                 ],
               ),
-            ),
-            const SizedBox(height: 48),
-          ],
-        ),
+
+              const Spacer(flex: 2),
+
+              // Bottom subtle indicator
+              SizedBox(
+                width: 40,
+                height: 2,
+                child: LinearProgressIndicator(
+                  backgroundColor: kWhite.withValues(alpha: 0.05),
+                  valueColor: const AlwaysStoppedAnimation(kTeal),
+                ),
+              )
+              .animate()
+              .fadeIn(delay: 1200.ms)
+              .scaleX(begin: 0, end: 1, duration: 1400.ms, curve: Curves.easeInOutExpo),
+              
+              const SizedBox(height: 60),
+            ],
+          ),
+        ],
       ),
     );
   }

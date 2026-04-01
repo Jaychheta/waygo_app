@@ -10,8 +10,8 @@ class ApiConfig {
 
   // ─── Raw base URLs ───────────────────────────────────────────────────────
   static const String _productionUrl  = 'https://waygo-backend-mhwb.onrender.com/api';
-  static const String _localUrlWeb    = 'http://localhost:3000/api';   // browser / web-server
-  static const String _localUrlMobile = 'http://10.0.2.2:3000/api';   // Android emulator
+  static const String _localUrlWeb    = 'http://localhost:3001/api';   // browser / web-server
+  static const String _localUrlMobile = 'http://10.0.2.2:3001/api';   // Android emulator
 
   /// Automatically resolves to the correct base URL based on the toggle and
   /// the current platform. Uses [kIsWeb] (flutter/foundation) — safe on Web,

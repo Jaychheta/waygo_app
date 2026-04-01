@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/itinerary_model.dart';
@@ -48,8 +46,7 @@ class AiService {
       } else {
         throw Exception('Server Error: ${response.statusCode}');
       }
-    } catch (e) {
-      print('AI Planner Error: $e. Using fallback…');
+    } catch (_) {
       return _fallbackGet(location, days, token);
     }
   }

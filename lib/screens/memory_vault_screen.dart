@@ -1,7 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:waygo_app/config/app_theme.dart';
+import '../config/app_theme.dart';
+import '../models/memory_model.dart';
+import '../services/auth_service.dart';
+import '../services/memory_service.dart';
+import '../services/trip_service.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/animated_card.dart';
 
 class MemoryVaultScreen extends StatefulWidget {
   const MemoryVaultScreen({super.key});
@@ -12,198 +20,158 @@ class MemoryVaultScreen extends StatefulWidget {
 
 class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
   final _picker = ImagePicker();
-
-  // Local memories list – in production, load from API
-  final List<Map<String, dynamic>> _memories = [];
-
+  final _memoryService = const MemoryService();
+  final _authService = const AuthService();
+  
+  Future<List<MemoryModel>>? _memoriesFuture;
   bool _isUploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshMemories();
+  }
+
+  void _refreshMemories() {
+    setState(() {
+      _memoriesFuture = _fetchMemories();
+    });
+  }
+
+  Future<List<MemoryModel>> _fetchMemories() async {
+    final userIdStr = await _authService.getUserId();
+    if (userIdStr == null) return [];
+    final userId = int.tryParse(userIdStr) ?? 0;
+    return _memoryService.getMemories(userId);
+  }
 
   Future<void> _pickPhoto(ImageSource source) async {
     try {
+      final userIdStr = await _authService.getUserId();
+      if (userIdStr == null) return;
+      final userId = int.tryParse(userIdStr) ?? 0;
+      final token = await _authService.getToken();
+      
+      // 1. Fetch available trips for selection
+      final trips = await const TripService().getUserTrips(userId, token: token);
+      if (!mounted) return;
+
+      String? selectedTrip;
+      if (trips.isNotEmpty) {
+        selectedTrip = await showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: kSurface2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text('Capture Memory For', style: TextStyle(color: kWhite, fontWeight: FontWeight.w900)),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: trips.length,
+                itemBuilder: (c, i) => ListTile(
+                  leading: const Icon(Icons.flight_takeoff_rounded, color: kTeal),
+                  title: Text(trips[i].name, style: const TextStyle(color: kWhite)),
+                  subtitle: Text(trips[i].location, style: TextStyle(color: kWhite.withValues(alpha: 0.3))),
+                  onTap: () => Navigator.pop(c, trips[i].name),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      
+      final tripName = selectedTrip ?? 'Global Expedition';
+      if (selectedTrip == null && trips.isNotEmpty) return; // User cancelled
+
+      // 2. Pick photo
       final file = await _picker.pickImage(source: source, imageQuality: 80);
       if (file == null) return;
 
       setState(() => _isUploading = true);
+      
+      final bytes = await file.readAsBytes();
+      final success = await _memoryService.uploadMemory(
+        userId: userId,
+        tripName: tripName,
+        imageBytes: bytes.toList(),
+        fileName: file.name,
+      );
 
-      // Simulate upload delay; replace with MemoryService.uploadMemory() for real backend
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-
-      setState(() {
-        _memories.insert(0, {
-          'path': file.path,
-          'tripName': 'My Trip',
-          'date': DateTime.now(),
-        });
-        _isUploading = false;
-      });
-
-      if (mounted) {
+      if (success) {
+        _refreshMemories();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Memory saved! 📸'), backgroundColor: kTeal),
+          const SnackBar(content: Text('Memory safe in the vault!'), backgroundColor: kTeal, behavior: SnackBarBehavior.floating),
         );
       }
+      
+      setState(() => _isUploading = false);
     } catch (e) {
       setState(() => _isUploading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
     }
-  }
-
-  void _showSourceSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: kNavy2,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(kRadius)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: kSlate.withOpacity(0.15), borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(height: 20),
-              const Text('Add Memory', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kWhite)),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: _sourceOption(
-                      icon: Icons.photo_camera_rounded,
-                      label: 'Camera',
-                      onTap: () { Navigator.pop(context); _pickPhoto(ImageSource.camera); },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _sourceOption(
-                      icon: Icons.photo_library_rounded,
-                      label: 'Gallery',
-                      onTap: () { Navigator.pop(context); _pickPhoto(ImageSource.gallery); },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sourceOption({required IconData icon, required String label, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: kNavy3,
-          borderRadius: BorderRadius.circular(kRadius16),
-          border: Border.all(color: kWhite.withOpacity(0.15)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: kTeal, size: 32),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(color: kWhite, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kNavy,
-      appBar: AppBar(
-        backgroundColor: kNavy,
-        elevation: 0,
-        title: const Text('Memory Vault', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: kWhite)),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Text('${_memories.length} photos', style: const TextStyle(color: kSlate, fontSize: 13)),
+      backgroundColor: kSurface,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          _buildSliverAppBar(),
+          FutureBuilder<List<MemoryModel>>(
+            future: _memoriesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting && !_isUploading) {
+                return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: kTeal)));
+              }
+              final memories = snapshot.data ?? [];
+              if (memories.isEmpty) return SliverFillRemaining(child: _buildEmptyState());
+
+              return SliverPadding(
+                padding: const EdgeInsets.all(24),
+                sliver: SliverMasonryGrid.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 20,
+                  itemBuilder: (context, index) => AnimatedCard(
+                    index: index,
+                    child: _memoryPolaroid(memories[index]),
+                  ),
+                  childCount: memories.length,
+                ),
+              );
+            },
           ),
         ],
       ),
-      body: _memories.isEmpty
-          ? _buildEmptyState()
-          : GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.85,
-              ),
-              itemCount: _memories.length,
-              itemBuilder: (_, i) => _memoryCard(_memories[i]),
-            ),
-      floatingActionButton: _isUploading
-          ? FloatingActionButton(
-              heroTag: 'memory_vault_fab',
-              onPressed: null,
-              backgroundColor: kTeal,
-              child: const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: kWhite, strokeWidth: 2.5)),
-            )
-          : FloatingActionButton.extended(
-              heroTag: 'memory_vault_fab',
-              onPressed: _showSourceSheet,
-              backgroundColor: kTeal,
-              icon: const Icon(Icons.add_photo_alternate_rounded, color: kWhite),
-              label: const Text('Add Memory', style: TextStyle(color: kWhite, fontWeight: FontWeight.w700)),
-            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _pickPhoto(ImageSource.gallery),
+        backgroundColor: kTeal,
+        child: _isUploading 
+          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: kWhite, strokeWidth: 2))
+          : const Icon(Icons.add_a_photo_rounded, color: kWhite),
+      ).animate().scale(delay: 400.ms),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 180,
+      pinned: true,
+      backgroundColor: kSurface,
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        title: const Text(
+          'Memory Vault',
+          style: TextStyle(color: kWhite, fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -1),
+        ),
+        background: Stack(
+          alignment: Alignment.centerRight,
           children: [
-            Container(
-              width: 100, height: 100,
-              decoration: BoxDecoration(
-                color: kTeal.withOpacity(0.15),
-                shape: BoxShape.circle,
-                border: Border.all(color: kTeal.withOpacity(0.15), width: 2),
-              ),
-              child: const Icon(Icons.photo_library_rounded, color: kTeal, size: 48),
-            ),
-            const SizedBox(height: 24),
-            const Text('No memories yet', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: kWhite)),
-            const SizedBox(height: 10),
-            const Text(
-              'Capture and save your travel moments.\nTap the button below to add your first memory!',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: kSlate, fontSize: 14, height: 1.6),
-            ),
-            const SizedBox(height: 32),
-            GestureDetector(
-              onTap: _showSourceSheet,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                decoration: BoxDecoration(gradient: kTealGradient, borderRadius: BorderRadius.circular(kRadius),
-                  boxShadow: [BoxShadow(color: kTeal.withOpacity(0.15), blurRadius: 18, offset: const Offset(0, 8))]),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add_photo_alternate_rounded, color: kWhite, size: 20),
-                    SizedBox(width: 10),
-                    Text('Add First Memory', style: TextStyle(color: kWhite, fontWeight: FontWeight.w700, fontSize: 15)),
-                  ],
-                ),
-              ),
+            Padding(
+              padding: const EdgeInsets.only(right: 20, top: 40),
+              child: const Icon(Icons.camera_rounded, color: kTeal, size: 100).animate().fadeIn().scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1)),
             ),
           ],
         ),
@@ -211,62 +179,68 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
     );
   }
 
-  Widget _memoryCard(Map<String, dynamic> memory) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(kRadius),
-      child: Stack(
-        fit: StackFit.expand,
+  Widget _memoryPolaroid(MemoryModel memory) {
+    return GlassContainer(
+      padding: const EdgeInsets.all(8),
+      radius: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
-          if (memory['path'] != null)
-            Image.file(File(memory['path'] as String), fit: BoxFit.cover)
-          else
-            Container(color: kNavy2, child: const Icon(Icons.image_rounded, color: kSlate, size: 40)),
-
-          // Gradient overlay
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.15)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: memory.imageUrl.startsWith('http') 
+                ? Image.network(memory.imageUrl, fit: BoxFit.cover)
+                : Image.file(File(memory.imageUrl), fit: BoxFit.cover),
             ),
           ),
-
-          // Trip name label
-          Positioned(
-            bottom: 12, left: 12, right: 12,
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  memory['tripName'] as String? ?? 'Trip',
-                  style: const TextStyle(color: kWhite, fontWeight: FontWeight.w700, fontSize: 13),
+                  memory.tripName.toUpperCase(),
+                  style: const TextStyle(color: kTeal, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today_rounded, color: kSlate, size: 10),
-                    const SizedBox(width: 4),
-                    Text(
-                      _formatDate(memory['date'] as DateTime?),
-                      style: const TextStyle(color: kSlate, fontSize: 10),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  _formatDate(memory.date),
+                  style: TextStyle(color: kWhite.withValues(alpha: 0.3), fontSize: 11, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 4),
         ],
       ),
     );
   }
 
-  String _formatDate(DateTime? d) {
-    if (d == null) return '';
-    return '${d.day} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.month - 1]} ${d.year}';
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.photo_library_rounded, color: kTeal, size: 80).animate().shake(),
+          const SizedBox(height: 24),
+          const Text(
+            'The vault is empty.',
+            style: TextStyle(color: kWhite, fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Freeze a moment in time.',
+            style: TextStyle(color: kWhite.withValues(alpha: 0.2), fontSize: 14),
+          ),
+        ],
+      ),
+    );
   }
 }

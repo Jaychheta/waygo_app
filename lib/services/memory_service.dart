@@ -4,14 +4,28 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/memory_model.dart';
+import 'auth_service.dart';
 
 class MemoryService {
   const MemoryService();
 
+  final _auth = const AuthService();
+
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _auth.getToken();
+    final headers = <String, String>{};
+    if (token != null && token.isNotEmpty) {
+      headers["Authorization"] = "Bearer $token";
+    }
+    return headers;
+  }
+
   Future<List<MemoryModel>> getMemories(int userId) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/memories/$userId'),
+        headers: headers,
       ).timeout(ApiConfig.requestTimeout);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -34,10 +48,14 @@ class MemoryService {
     required String fileName,
   }) async {
     try {
+      final token = await _auth.getToken();
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('${ApiConfig.baseUrl}/memories/upload'),
       );
+      if (token != null) {
+        request.headers["Authorization"] = "Bearer $token";
+      }
       request.fields['user_id'] = userId.toString();
       request.fields['trip_name'] = tripName;
       request.files.add(http.MultipartFile.fromBytes(

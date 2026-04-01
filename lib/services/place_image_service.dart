@@ -35,9 +35,7 @@ class PlaceImageService {
           return imageUrl;
         }
       }
-    } catch (e) {
-      print('Proxy Image Fetch Error: $e');
-    }
+    } catch (_) {}
 
     // Fallback if proxy fails
     final fallback = _getCategoryFallback(category: category, description: description, placeName: placeName);

@@ -3,9 +3,21 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import 'auth_service.dart';
 
 class ExpenseService {
   const ExpenseService();
+
+  final _auth = const AuthService();
+
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _auth.getToken();
+    final headers = {"Content-Type": "application/json"};
+    if (token != null && token.isNotEmpty) {
+      headers["Authorization"] = "Bearer $token";
+    }
+    return headers;
+  }
 
   Future<bool> addExpense({
     required int tripId,
@@ -16,9 +28,10 @@ class ExpenseService {
     List<int> splitWith = const [],
   }) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/expenses/add'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'trip_id': tripId,
           'paid_by': paidBy,
@@ -40,9 +53,10 @@ class ExpenseService {
 
   Future<List<dynamic>> getExpenses(int tripId) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/expenses?trip_id=$tripId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       ).timeout(ApiConfig.requestTimeout);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as List<dynamic>;
@@ -59,9 +73,10 @@ class ExpenseService {
 
   Future<List<dynamic>> getSettlements(int tripId) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/expenses/settlements?trip_id=$tripId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       ).timeout(ApiConfig.requestTimeout);
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as List<dynamic>;

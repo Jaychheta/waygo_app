@@ -5,8 +5,23 @@ import 'package:waygo_app/screens/dashboard_screen.dart';
 import 'package:waygo_app/screens/login_screen.dart';
 import 'package:waygo_app/screens/register_screen.dart';
 import 'package:waygo_app/screens/splash_screen.dart';
+import 'package:waygo_app/services/place_image_service.dart';
 
-void main() {
+import 'package:flutter/services.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Luxury optimization: Set system overlay for OLED-ready transparent status bar
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: kSurface,
+    systemNavigationBarIconBrightness: Brightness.light,
+  ));
+
+  // Clear stale image cache so fresh city photos are always fetched
+  PlaceImageService.instance.clearCache();
   runApp(const WayGoApp());
 }
 

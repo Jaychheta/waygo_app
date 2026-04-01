@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
-import 'package:waygo_app/config/api_config.dart';
-import 'package:waygo_app/config/app_theme.dart';
-import 'package:waygo_app/screens/itinerary_screen.dart';
-import 'package:waygo_app/services/ai_service.dart';
-import 'package:waygo_app/models/itinerary_model.dart';
-import 'package:waygo_app/widgets/custom_button.dart';
-import 'package:waygo_app/services/place_image_service.dart';
+import '../config/api_config.dart';
+import '../config/app_theme.dart';
+import 'itinerary_screen.dart';
+import '../services/ai_service.dart';
+import '../models/itinerary_model.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/place_image_widget.dart';
+import '../widgets/animated_card.dart';
 
 class AiPlannerScreen extends StatefulWidget {
   const AiPlannerScreen({super.key});
@@ -22,7 +25,6 @@ class _AiPlannerScreenState extends State<AiPlannerScreen> with AutomaticKeepAli
 
   final _aiService = const AiService();
   final _destCtrl = TextEditingController();
-  
   final _daysCtrl = TextEditingController(text: '3');
   bool _isLoading = false;
   ItineraryModel? _itinerary;
@@ -41,7 +43,11 @@ class _AiPlannerScreenState extends State<AiPlannerScreen> with AutomaticKeepAli
 
     if (destination.isEmpty || days <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter destination and valid number of days'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Destination and valid days required.'),
+          backgroundColor: kDanger,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -51,7 +57,15 @@ class _AiPlannerScreenState extends State<AiPlannerScreen> with AutomaticKeepAli
       final itinerary = await _aiService.generateItinerary(location: destination, days: days);
       if (mounted) setState(() => _itinerary = itinerary);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('AI is currently busy. Try again soon.'),
+            backgroundColor: kDanger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -61,198 +75,315 @@ class _AiPlannerScreenState extends State<AiPlannerScreen> with AutomaticKeepAli
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      backgroundColor: kNavy,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+      backgroundColor: kSurface,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // 1. Astral Header
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            backgroundColor: kSurface,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Center(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 10),
-                    _buildInputs(),
-                    if (_isLoading) const Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: kTeal)),
-                    if (_itinerary != null) ...[
-                      const SizedBox(height: 32),
-                      _buildResultsHeader(),
-                      const SizedBox(height: 16),
-                      ..._itinerary!.dayPlans.take(1).map((d) => _miniDayPreview(d)).toList(),
-                      const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => ItineraryScreen(itinerary: _itinerary!))),
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [Text('View Full Detailed Plan', style: TextStyle(color: kTeal, fontWeight: FontWeight.bold)), Icon(Icons.chevron_right, color: kTeal)]),
-                      ),
-                    ] else if (!_isLoading) ...[
-                      const SizedBox(height: 100),
-                      Icon(Icons.auto_awesome_outlined, color: kWhite.withOpacity(0.05), size: 120),
-                      const SizedBox(height: 20),
-                      Text('Start your AI journey', style: TextStyle(color: kWhite.withOpacity(0.2), fontSize: 18, fontWeight: FontWeight.w600)),
-                    ],
                     const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: kWhite.withOpacity(0.05), shape: BoxShape.circle),
-              child: const Icon(Icons.arrow_back_rounded, color: kWhite, size: 20),
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Expanded(child: Text('WayGo AI Planner', style: TextStyle(color: kWhite, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5))),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: kWhite.withOpacity(0.05), shape: BoxShape.circle),
-            child: const Icon(Icons.notifications_none_rounded, color: kWhite, size: 22),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputs() {
-    return Column(
-      children: [
-        Autocomplete<String>(
-          optionsBuilder: (TextEditingValue value) => _fetchSuggestions(value.text),
-          onSelected: (String s) => _destCtrl.text = s,
-          fieldViewBuilder: (ctx, ctrl, focus, onSubmitted) {
-            ctrl.addListener(() => _destCtrl.text = ctrl.text);
-            if (_destCtrl.text.isNotEmpty && ctrl.text.isEmpty) ctrl.text = _destCtrl.text;
-            return TextField(
-              controller: ctrl,
-              focusNode: focus,
-              style: const TextStyle(color: kWhite, fontSize: 15, fontWeight: FontWeight.w600),
-              decoration: InputDecoration(
-                hintText: 'Where to next?',
-                hintStyle: const TextStyle(color: kSlate),
-                prefixIcon: const Icon(Icons.location_on_rounded, color: kTeal, size: 18),
-                filled: true,
-                fillColor: kWhite.withOpacity(0.03),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: kWhite.withOpacity(0.05))),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-            );
-          },
-          optionsViewBuilder: (ctx, onSelected, options) => _buildOptionsView(ctx, onSelected, options),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _daysCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: kWhite, fontSize: 15, fontWeight: FontWeight.w700),
-                decoration: InputDecoration(
-                  hintText: 'No. of Days',
-                  hintStyle: const TextStyle(color: kSlate),
-                  prefixIcon: const Icon(Icons.timer_outlined, color: kTeal, size: 18),
-                  filled: true,
-                  fillColor: kWhite.withOpacity(0.03),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: kWhite.withOpacity(0.05))),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _generateItinerary,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: kTeal,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kTeal.withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 4),
+                    _buildOrb(),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'AI Planner',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: kWhite,
+                        letterSpacing: -1,
+                      ),
                     ),
                   ],
                 ),
-                child: const Icon(Icons.auto_awesome, color: kWhite, size: 22),
               ),
             ),
-          ],
-        ),
-      ],
-    );
-  }
+          ),
 
+          // 2. Input Section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  Text(
+                    'Dream big. Our AI curates the details.',
+                    style: TextStyle(
+                      color: kWhite.withValues(alpha: 0.4),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ).animate().fadeIn(),
+                  const SizedBox(height: 32),
+                  
+                  _buildForm(),
 
-  Widget _buildResultsHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text('Your Trip Plan', style: TextStyle(color: kWhite, fontSize: 20, fontWeight: FontWeight.w800)),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(color: kTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-          child: Text('${_itinerary?.days} Days', style: const TextStyle(color: kTeal, fontSize: 12, fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
+                  if (_isLoading) _buildStardustLoader(),
+                  
+                  if (_itinerary != null) ...[
+                    const SizedBox(height: 48),
+                    _buildResults(),
+                  ],
 
-  Widget _miniDayPreview(DayPlan day) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Text('Day ${day.day}: ${day.theme}', style: const TextStyle(color: kSlate, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-        ),
-        ...day.activities.take(2).map((a) => _activityTile(a)).toList(),
-      ],
-    );
-  }
-
-  Widget _activityTile(Activity a) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: kNavy2, borderRadius: BorderRadius.circular(20), border: Border.all(color: kWhite.withOpacity(0.05))),
-      child: Row(
-        children: [
-          ClipRRect(borderRadius: BorderRadius.circular(12), child: SizedBox(width: 60, height: 60, child: PlaceImageWidget(placeName: a.name, cityName: _destCtrl.text))),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(a.name, style: const TextStyle(color: kWhite, fontSize: 15, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(a.time, style: const TextStyle(color: kTeal, fontSize: 12, fontWeight: FontWeight.bold)),
-              ],
+                  if (!_isLoading && _itinerary == null) ...[
+                    const SizedBox(height: 60),
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      color: kTeal.withValues(alpha: 0.05),
+                      size: 80,
+                    ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 2.seconds),
+                  ],
+                  
+                  const SizedBox(height: 140),
+                ],
+              ),
             ),
           ),
-          const Icon(Icons.favorite_border_rounded, color: kSlate, size: 18),
         ],
       ),
     );
   }
 
-  // --- Helper Methods ---
+  Widget _buildOrb() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(
+          colors: [kTeal, Colors.transparent],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: kTeal.withValues(alpha: 0.2),
+            blurRadius: 30,
+            spreadRadius: 10,
+          ),
+        ],
+      ),
+    ).animate(onPlay: (c) => c.repeat(reverse: true))
+    .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.2, 1.2), duration: 2.seconds, curve: Curves.easeInOut);
+  }
 
+  Widget _buildForm() {
+    return GlassContainer(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Destination Autocomplete
+          Autocomplete<String>(
+            optionsBuilder: (v) => _fetchSuggestions(v.text),
+            onSelected: (s) => _destCtrl.text = s,
+            fieldViewBuilder: (ctx, ctrl, focus, onSubmitted) {
+              ctrl.addListener(() => _destCtrl.text = ctrl.text);
+              return _textField(
+                controller: ctrl,
+                focusNode: focus,
+                hint: 'Destination (e.g. Kyoto)',
+                icon: Icons.map_rounded,
+              );
+            },
+            optionsViewBuilder: (ctx, onSelected, options) => _buildOptionsView(ctx, onSelected, options),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Row for Days and Go
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _textField(
+                  controller: _daysCtrl,
+                  hint: 'Days',
+                  icon: Icons.timer_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CustomButton(
+                  text: 'GO',
+                  height: 54,
+                  onPressed: _generateItinerary,
+                  isLoading: _isLoading,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _textField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    FocusNode? focusNode,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: kWhite, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: kWhite.withValues(alpha: 0.2), fontWeight: FontWeight.w400),
+        prefixIcon: Icon(icon, color: kTeal.withValues(alpha: 0.5), size: 18),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.02),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: kWhite.withValues(alpha: 0.05)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: kWhite.withValues(alpha: 0.05)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: kTeal, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStardustLoader() {
+    return Column(
+      children: [
+        const SizedBox(height: 60),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            ...List.generate(3, (i) => Container(
+              width: 100.0 + (i * 40),
+              height: 100.0 + (i * 40),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: kTeal.withValues(alpha: 0.1 - (i * 0.03))),
+              ),
+            ).animate(onPlay: (c) => c.repeat()).scale(
+              begin: const Offset(1, 1), 
+              end: const Offset(1.2, 1.2), 
+              duration: (1200 + (i * 400)).ms,
+              curve: Curves.easeInOut,
+            ).fadeOut()),
+            
+            const Icon(Icons.auto_awesome_rounded, color: kTeal, size: 40)
+              .animate(onPlay: (c) => c.repeat())
+              .shimmer(duration: 1.seconds, color: kWhite),
+          ],
+        ),
+        const SizedBox(height: 32),
+        Text(
+          'CURATING YOUR ADVENTURE',
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 3,
+            fontWeight: FontWeight.w800,
+            color: kTeal.withValues(alpha: 0.6),
+          ),
+        ).animate(onPlay: (c) => c.repeat(reverse: true)).fadeIn(duration: 1.seconds),
+      ],
+    );
+  }
+
+  Widget _buildResults() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Proposed Itinerary',
+              style: TextStyle(color: kWhite, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -1),
+            ),
+            GlassContainer(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              radius: 20,
+              child: Text(
+                '${_itinerary?.days} DAYS',
+                style: const TextStyle(color: kTeal, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        
+        // Staggered Day Cards
+        ..._itinerary!.dayPlans.take(3).map((day) => AnimatedCard(
+          index: day.day,
+          child: _dayCard(day),
+        )),
+
+        const SizedBox(height: 24),
+        CustomButton(
+          text: 'View Full Journey',
+          variant: ButtonVariant.secondary,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ItineraryScreen(itinerary: _itinerary!)),
+          ),
+        ),
+      ],
+    ).animate().fadeIn(duration: 800.ms);
+  }
+
+  Widget _dayCard(DayPlan day) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'DAY ${day.day}: ${day.theme.toUpperCase()}',
+              style: TextStyle(
+                fontSize: 11,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w800,
+                color: kWhite.withValues(alpha: 0.3),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...day.activities.take(2).map((a) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 54, 
+                  height: 54, 
+                  child: PlaceImageWidget(placeName: a.name, cityName: _destCtrl.text),
+                ),
+              ),
+              title: Text(
+                a.name,
+                style: const TextStyle(color: kWhite, fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                a.time,
+                style: const TextStyle(color: kTeal, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              trailing: Icon(Icons.arrow_forward_ios_rounded, color: kWhite.withValues(alpha: 0.1), size: 14),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildOptionsView(BuildContext ctx, Function(String) onSelected, Iterable<String> options) {
     return Align(
@@ -262,18 +393,20 @@ class _AiPlannerScreenState extends State<AiPlannerScreen> with AutomaticKeepAli
         child: Container(
           width: MediaQuery.of(ctx).size.width - 48,
           margin: const EdgeInsets.only(top: 8),
-          decoration: BoxDecoration(color: kNavy2, borderRadius: BorderRadius.circular(20), border: Border.all(color: kWhite.withOpacity(0.1)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)]),
-          child: ListView.builder(
+          child: GlassContainer(
             padding: EdgeInsets.zero,
-            shrinkWrap: true,
-            itemCount: options.length,
-            itemBuilder: (ctx, i) {
-              final option = options.elementAt(i);
-              return ListTile(
-                title: Text(option, style: const TextStyle(color: kWhite, fontSize: 14)),
-                onTap: () => onSelected(option),
-              );
-            },
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: options.length,
+              itemBuilder: (ctx, i) {
+                final option = options.elementAt(i);
+                return ListTile(
+                  title: Text(option, style: const TextStyle(color: kWhite, fontSize: 14)),
+                  onTap: () => onSelected(option),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -292,56 +425,5 @@ class _AiPlannerScreenState extends State<AiPlannerScreen> with AutomaticKeepAli
       }
       return [];
     } catch (e) { return []; }
-  }
-}
-
-class CategoryBadge extends StatelessWidget {
-  final String category;
-  const CategoryBadge({super.key, required this.category});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color = kTeal; IconData icon = Icons.info_outline_rounded;
-    if (category.toLowerCase().contains('food')) { color = const Color(0xFFF59E0B); icon = Icons.restaurant_rounded;
-    } else if (category.toLowerCase().contains('walk')) { color = const Color(0xFF10B981); icon = Icons.directions_walk_rounded;
-    } else if (category.toLowerCase().contains('photo')) { color = const Color(0xFF6366F1); icon = Icons.camera_alt_rounded; }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(30)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, color: color, size: 12), const SizedBox(width: 6), Text(category, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700))]),
-    );
-  }
-}
-
-class PlaceImageWidget extends StatefulWidget {
-  final String placeName;
-  final String cityName;
-  final String category;
-  final String description;
-
-  const PlaceImageWidget({super.key, required this.placeName, required this.cityName, this.category = '', this.description = ''});
-
-  @override
-  State<PlaceImageWidget> createState() => _PlaceImageWidgetState();
-}
-
-class _PlaceImageWidgetState extends State<PlaceImageWidget> {
-  String? _imageUrl; bool _loading = true;
-
-  @override
-  void initState() { super.initState(); _loadImage(); }
-
-  Future<void> _loadImage() async {
-    if (!mounted) return;
-    setState(() => _loading = true);
-    final url = await PlaceImageService.instance.fetchImage(placeName: widget.placeName, cityName: widget.cityName, category: widget.category, description: widget.description);
-    if (mounted) setState(() { _imageUrl = url; _loading = false; });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) return Container(color: kNavy3, child: const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: kTeal))));
-    return Image.network(_imageUrl!, fit: BoxFit.cover, errorBuilder: (ctx, err, stack) => Container(color: kNavy3, child: Icon(Icons.broken_image_outlined, color: kSlate.withOpacity(0.3), size: 30)));
   }
 }

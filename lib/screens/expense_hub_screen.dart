@@ -1,10 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:waygo_app/config/api_config.dart';
-import 'package:waygo_app/config/app_theme.dart';
-import 'package:waygo_app/services/auth_service.dart';
-import 'package:waygo_app/services/trip_service.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../config/app_theme.dart';
+import '../services/auth_service.dart';
+import '../services/trip_service.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/animated_card.dart';
+import '../models/trip_model.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PART 1 — ExpenseHubScreen: shows all user trips to pick from
@@ -23,119 +25,188 @@ class _ExpenseHubScreenState extends State<ExpenseHubScreen>
   bool get wantKeepAlive => true;
 
   final _authService = const AuthService();
-  Future<List<dynamic>> _tripsFuture = Future.value([]);
+  Future<List<TripModel>> _tripsFuture = Future.value([]);
+  bool _isInit = false;
 
   @override
   void initState() {
     super.initState();
-    _tripsFuture = _fetchTrips();
+    _loadTrips();
   }
 
-  Future<List<dynamic>> _fetchTrips() async {
-    final userIdStr = await _authService.getUserId();
-    if (userIdStr == null) {
-      // If no user ID, we can't fetch trips.
-      return [];
-    }
-    final userId = int.tryParse(userIdStr);
-    if (userId == null) return [];
-    
-    final token = await _authService.getToken();
-    return TripService().getUserTrips(userId, token: token);
-  }
-
-  Future<void> _refreshTrips() async {
+  Future<void> _loadTrips() async {
     setState(() {
       _tripsFuture = _fetchTrips();
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_isInit) {
+      _loadTrips();
+    }
+    _isInit = true;
+  }
+
+  Future<List<TripModel>> _fetchTrips() async {
+    final userIdStr = await _authService.getUserId();
+    if (userIdStr == null) return [];
+    final userId = int.tryParse(userIdStr) ?? 0;
+    final token = await _authService.getToken();
+    return const TripService().getUserTrips(userId, token: token);
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
     return Scaffold(
-      backgroundColor: kNavy,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Expense Hub',
-          style: TextStyle(color: kWhite, fontWeight: FontWeight.w800, fontSize: 22),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _refreshTrips,
-            icon: const Icon(Icons.refresh_rounded, color: kWhite),
-          ),
-        ],
-      ),
+      backgroundColor: kSurface,
       body: RefreshIndicator(
-        onRefresh: _refreshTrips,
-        color: kTeal,
-        backgroundColor: kNavy2,
-        child: FutureBuilder<List<dynamic>>(
-        future: _tripsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: kTeal));
-          }
-          final trips = snapshot.data ?? [];
-          if (trips.isEmpty) {
-            return const Center(child: Text('No trips found', style: TextStyle(color: kSlate)));
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            itemCount: trips.length,
-            itemBuilder: (_, i) {
-              final trip = trips[i] as Map<String, dynamic>;
-              return GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => TripExpenseDetailScreen(
-                      tripId: (trip['id'] as num).toInt(),
-                      tripName: trip['name'] ?? 'Trip',
-                    ),
-                  ),
-                ),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: kNavy2,
-                    borderRadius: BorderRadius.circular(kRadius),
-                    border: Border.all(color: kWhite.withOpacity(0.05)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(color: kTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.wallet_rounded, color: kTeal),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(trip['name'] ?? '', style: const TextStyle(color: kWhite, fontWeight: FontWeight.w700)),
-                            Text(trip['location'] ?? '', style: const TextStyle(color: kSlate, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right_rounded, color: kSlate),
-                    ],
+        color: const Color(0xFF00BFA5),
+        backgroundColor: const Color(0xFF111111),
+        onRefresh: () async {
+          await _loadTrips();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 140,
+            backgroundColor: kSurface,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              title: const Text(
+                'Financials',
+                style: TextStyle(color: kWhite, fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -1),
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Track your global spending with precision.',
+                    style: TextStyle(color: kWhite.withValues(alpha: 0.4), fontSize: 14),
+                  ).animate().fadeIn(),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+
+          FutureBuilder<List<TripModel>>(
+            future: _tripsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(
+                  child: Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: kTeal))),
+                );
+              }
+              final trips = snapshot.data ?? [];
+              if (trips.isEmpty) {
+                return SliverToBoxAdapter(child: _buildEmptyHub());
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, i) {
+                      final trip = trips[i];
+                      return AnimatedCard(
+                        index: i,
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TripExpenseDetailScreen(
+                                  tripId: trip.id,
+                                  tripName: trip.name,
+                                ),
+                            ),
+                          );
+                          _loadTrips(); // Refresh trips when returning
+                        },
+                        child: _tripExpenseCard(trip),
+                      );
+                    },
+                    childCount: trips.length,
                   ),
                 ),
               );
             },
-            );
-          },
+          ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  Widget _tripExpenseCard(TripModel trip) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: kTeal.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded, color: kTeal),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trip.name,
+                    style: const TextStyle(color: kWhite, fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    trip.location,
+                    style: TextStyle(color: kWhite.withValues(alpha: 0.3), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: kWhite, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyHub() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          children: [
+            Icon(Icons.payments_outlined, color: kWhite.withValues(alpha: 0.05), size: 100),
+            const SizedBox(height: 16),
+            Text('No active ledgers.', style: TextStyle(color: kWhite.withValues(alpha: 0.3))),
+          ],
         ),
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PART 2 — TripExpenseDetailScreen
+// ─────────────────────────────────────────────────────────────────────────────
 
 class TripExpenseDetailScreen extends StatefulWidget {
   final int tripId;
@@ -159,8 +230,6 @@ class _TripExpenseDetailScreenState extends State<TripExpenseDetailScreen> {
   List<dynamic> _expenses = [];
   bool _isLoading = true;
   double _totalSpent = 0.0;
-  String _selectedCategory = 'Food';
-  final List<String> _categories = ['Food', 'Transport', 'Stay', 'Shopping', 'Others'];
 
   final Map<String, IconData> _categoryIcons = {
     'Food': Icons.restaurant_rounded,
@@ -201,107 +270,17 @@ class _TripExpenseDetailScreenState extends State<TripExpenseDetailScreen> {
     }
   }
 
-  void _showAddExpenseDialog() {
-    showDialog(
+  void _showAddExpenseSheet() {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: kNavy2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Add Expense', style: TextStyle(color: kWhite, fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _titleController,
-                  style: const TextStyle(color: kWhite),
-                  decoration: InputDecoration(
-                    hintText: 'Description (e.g., Dinner)',
-                    hintStyle: const TextStyle(color: kSlate),
-                    filled: true,
-                    fillColor: kNavy.withOpacity(0.5),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _amountController,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: kWhite),
-                  decoration: InputDecoration(
-                    hintText: 'Amount (e.g., 25.50)',
-                    hintStyle: const TextStyle(color: kSlate),
-                    filled: true,
-                    fillColor: kNavy.withOpacity(0.5),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Category', style: TextStyle(color: kSlate, fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _categories.map((cat) {
-                    final isSelected = _selectedCategory == cat;
-                    return GestureDetector(
-                      onTap: () {
-                        setDialogState(() => _selectedCategory = cat);
-                        setState(() => _selectedCategory = cat);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected ? kTeal : kNavy.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: isSelected ? kTeal : kWhite.withOpacity(0.1)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(_categoryIcons[cat], color: isSelected ? kWhite : kSlate, size: 14),
-                            const SizedBox(width: 6),
-                            Text(cat, style: TextStyle(color: isSelected ? kWhite : kSlate, fontSize: 12, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: kSlate))),
-            ElevatedButton(
-              onPressed: () async {
-                final title = _titleController.text.trim();
-                final amount = double.tryParse(_amountController.text) ?? 0.0;
-                
-                if (title.isNotEmpty && amount > 0) {
-                  final success = await _tripService.addExpense(
-                    tripId: widget.tripId,
-                    title: title,
-                    amount: amount,
-                    category: _selectedCategory,
-                  );
-                  if (success && mounted) {
-                    _titleController.clear();
-                    _amountController.clear();
-                    Navigator.pop(ctx);
-                    _fetchExpenses();
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: kTeal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Add', style: TextStyle(color: kWhite, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _AddExpenseSheet(
+        tripId: widget.tripId,
+        onAdded: () {
+          _fetchExpenses();
+          Navigator.pop(ctx);
+        },
       ),
     );
   }
@@ -309,86 +288,109 @@ class _TripExpenseDetailScreenState extends State<TripExpenseDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kNavy,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: kWhite.withOpacity(0.05), shape: BoxShape.circle),
-            child: const Icon(Icons.arrow_back_rounded, color: kWhite, size: 20),
+      backgroundColor: kSurface,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 320,
+            backgroundColor: kSurface,
+            leading: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kWhite, size: 20),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildOrbSummary(),
+              title: Text(
+                widget.tripName,
+                style: const TextStyle(color: kWhite, fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: -1),
+              ),
+              titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            ),
           ),
-        ),
-        title: Text(widget.tripName, style: const TextStyle(color: kWhite, fontWeight: FontWeight.w800)),
-        actions: [
-          IconButton(
-            onPressed: _fetchExpenses,
-            icon: const Icon(Icons.refresh_rounded, color: kSlate),
-          ),
-        ],
-      ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: kTeal))
-        : Column(
-            children: [
-              _buildSummaryCard(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    const Text('History', style: TextStyle(color: kWhite, fontSize: 18, fontWeight: FontWeight.w800)),
-                    const Spacer(),
-                    Text('${_expenses.length} Records', style: const TextStyle(color: kSlate, fontSize: 12)),
-                  ],
+
+          if (_isLoading)
+            const SliverToBoxAdapter(
+              child: Center(child: Padding(padding: EdgeInsets.all(60), child: CircularProgressIndicator(color: kTeal))),
+            )
+          else if (_expenses.isEmpty)
+            SliverToBoxAdapter(child: _buildEmptyState())
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final expense = _expenses[i];
+                    return AnimatedCard(
+                      index: i,
+                      child: _expenseTile(expense),
+                    );
+                  },
+                  childCount: _expenses.length,
                 ),
               ),
-              Expanded(
-                child: _expenses.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      itemCount: _expenses.length,
-                      itemBuilder: (_, i) => _buildExpenseTile(_expenses[i]),
-                    ),
-              ),
-            ],
-          ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddExpenseDialog,
-        backgroundColor: kTeal,
-        child: const Icon(Icons.add_rounded, color: kWhite, size: 30),
+            ),
+        ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddExpenseSheet,
+        backgroundColor: kTeal,
+        label: const Text('Add Expense', style: TextStyle(color: kWhite, fontWeight: FontWeight.w800, letterSpacing: 1)),
+        icon: const Icon(Icons.add_rounded, color: kWhite),
+      ).animate().scale(delay: 500.ms),
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildOrbSummary() {
     return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: kTealGradient,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: kTeal.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 10))],
-      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('Total Spent', style: TextStyle(color: kWhite.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          Text('\$${_totalSpent.toStringAsFixed(2)}', style: const TextStyle(color: kWhite, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1)),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: kWhite.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+          const SizedBox(height: 20),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 140,
+                height: 140,
+                child: CircularProgressIndicator(
+                  value: 0.75, // Sample budget progress
+                  strokeWidth: 10,
+                  color: kTeal,
+                  backgroundColor: kWhite.withValues(alpha: 0.05),
+                ),
+              ).animate(onPlay: (c) => c.repeat()).shimmer(duration: 3.seconds),
+              Column(
+                children: [
+                  Text(
+                    'TOTAL',
+                    style: TextStyle(color: kWhite.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\$${_totalSpent.toStringAsFixed(0)}',
+                    style: const TextStyle(color: kWhite, fontSize: 32, fontWeight: FontWeight.w900),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          GlassContainer(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            radius: 12,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.analytics_rounded, color: kWhite, size: 16),
-                const SizedBox(width: 6),
-                Text('Trip Budget Tracking', style: const TextStyle(color: kWhite, fontSize: 12, fontWeight: FontWeight.w700)),
+                const Icon(Icons.auto_graph_rounded, color: kTeal, size: 16),
+                const SizedBox(width: 10),
+                Text(
+                  'Within expected budget',
+                  style: TextStyle(color: kWhite.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),
@@ -397,50 +399,47 @@ class _TripExpenseDetailScreenState extends State<TripExpenseDetailScreen> {
     );
   }
 
-  Widget _buildExpenseTile(dynamic expense) {
+  Widget _expenseTile(dynamic expense) {
     final title = expense['title'] ?? 'Expense';
     final amount = double.tryParse(expense['amount'].toString()) ?? 0.0;
     final category = expense['category'] ?? 'Others';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kNavy2,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: kWhite.withOpacity(0.05)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: kTeal.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(color: kWhite.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(12)),
+              child: Icon(_categoryIcons[category] ?? Icons.receipt_long_rounded, color: kTeal, size: 20),
             ),
-            child: Icon(_categoryIcons[category] ?? Icons.receipt_long_rounded, color: kTeal, size: 20),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: kWhite, fontWeight: FontWeight.w700, fontSize: 16)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(category, style: const TextStyle(color: kTeal, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
-                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: kSlate, shape: BoxShape.circle)),
-                    const SizedBox(width: 8),
-                    Text(expense['date'] != null ? expense['date'].toString().substring(0, 10) : 'Today', style: const TextStyle(color: kSlate, fontSize: 11)),
-                  ],
-                ),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: kWhite, fontWeight: FontWeight.w800, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(category.toUpperCase(), style: const TextStyle(color: kTeal, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      const SizedBox(width: 8),
+                      Container(width: 3, height: 3, decoration: BoxDecoration(color: kWhite.withValues(alpha: 0.1), shape: BoxShape.circle)),
+                      const SizedBox(width: 8),
+                      Text(
+                        expense['date'] != null ? expense['date'].toString().substring(0, 10) : 'Today', 
+                        style: TextStyle(color: kWhite.withValues(alpha: 0.2), fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text('\$${amount.toStringAsFixed(2)}', style: const TextStyle(color: kWhite, fontWeight: FontWeight.w800, fontSize: 16)),
-        ],
+            Text('\$${amount.toStringAsFixed(2)}', style: const TextStyle(color: kWhite, fontWeight: FontWeight.w900, fontSize: 16)),
+          ],
+        ),
       ),
     );
   }
@@ -450,11 +449,140 @@ class _TripExpenseDetailScreenState extends State<TripExpenseDetailScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_outlined, color: kSlate.withOpacity(0.3), size: 60),
+          const SizedBox(height: 80),
+          Icon(Icons.receipt_long_rounded, color: kWhite.withValues(alpha: 0.05), size: 100),
           const SizedBox(height: 16),
-          const Text('No expenses recorded yet', style: TextStyle(color: kSlate, fontSize: 14)),
+          Text('Cloud ledger is empty.', style: TextStyle(color: kWhite.withValues(alpha: 0.3))),
         ],
       ),
     );
+  }
+}
+
+class _AddExpenseSheet extends StatefulWidget {
+  final int tripId;
+  final VoidCallback onAdded;
+  const _AddExpenseSheet({required this.tripId, required this.onAdded});
+
+  @override
+  State<_AddExpenseSheet> createState() => _AddExpenseSheetState();
+}
+
+class _AddExpenseSheetState extends State<_AddExpenseSheet> {
+  final _titleCtrl = TextEditingController();
+  final _amountCtrl = TextEditingController();
+  String _selectedCat = 'Food';
+  bool _isSubmitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: GlassContainer(
+        radius: 32,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'New Record',
+              style: TextStyle(color: kWhite, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -1),
+            ),
+            const SizedBox(height: 32),
+            _sheetField('Description', _titleCtrl, Icons.edit_note_rounded),
+            const SizedBox(height: 20),
+            _sheetField('Amount', _amountCtrl, Icons.attach_money_rounded, keyboardType: TextInputType.number),
+            const SizedBox(height: 32),
+            
+            Text(
+              'CATEGORY',
+              style: TextStyle(color: kWhite.withValues(alpha: 0.3), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2),
+            ),
+            const SizedBox(height: 16),
+            _buildCategoryPicker(),
+            
+            const SizedBox(height: 48),
+            CustomButton(
+              text: 'Save to Vault',
+              isLoading: _isSubmitting,
+              onPressed: _submit,
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetField(String label, TextEditingController ctrl, IconData icon, {TextInputType? keyboardType}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(color: kWhite.withValues(alpha: 0.3), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: ctrl,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: kWhite, fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: kTeal, size: 18),
+            filled: true,
+            fillColor: kWhite.withValues(alpha: 0.02),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kWhite.withValues(alpha: 0.05))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kWhite.withValues(alpha: 0.05))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kTeal)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryPicker() {
+    final cats = ['Food', 'Transport', 'Stay', 'Shopping', 'Others'];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: cats.map((c) {
+        final isSel = _selectedCat == c;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedCat = c),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSel ? kTeal : kWhite.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isSel ? kTeal : kWhite.withValues(alpha: 0.1)),
+            ),
+            child: Text(
+              c,
+              style: TextStyle(color: isSel ? kWhite : kWhite.withValues(alpha: 0.4), fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Future<void> _submit() async {
+    final t = _titleCtrl.text.trim();
+    final a = double.tryParse(_amountCtrl.text) ?? 0.0;
+    if (t.isEmpty || a <= 0) return;
+
+    setState(() => _isSubmitting = true);
+    final success = await const TripService().addExpense(
+      tripId: widget.tripId,
+      title: t,
+      amount: a,
+      category: _selectedCat,
+    );
+    if (success) {
+      widget.onAdded();
+    } else {
+      setState(() => _isSubmitting = false);
+    }
   }
 }
