@@ -693,57 +693,6 @@ class _TripExpenseDetailScreenState extends State<TripExpenseDetailScreen> {
     );
   }
 
-  Widget _expenseTile(dynamic expense) {
-    final title = expense['title'] ?? 'Expense';
-    final amount = double.tryParse(expense['amount'].toString()) ?? 0.0;
-    final category = expense['category'] ?? 'Others';
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GlassContainer(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(color: kWhite.withValues(alpha: 0.03), borderRadius: BorderRadius.circular(12)),
-              child: Icon(_categoryIcons[category] ?? Icons.receipt_long_rounded, color: kTeal, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(color: kWhite, fontWeight: FontWeight.w800, fontSize: 15)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(category.toUpperCase(), style: const TextStyle(color: kTeal, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      const SizedBox(width: 8),
-                      if (expense['spender'] != null) ...[
-                        Text(
-                          'by ${expense['spender']}', 
-                          style: TextStyle(color: kWhite.withValues(alpha: 0.2), fontSize: 10, fontWeight: FontWeight.bold)
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Container(width: 3, height: 3, decoration: BoxDecoration(color: kWhite.withValues(alpha: 0.1), shape: BoxShape.circle)),
-                      const SizedBox(width: 8),
-                      Text(
-                        expense['date'] != null ? expense['date'].toString().substring(0, 10) : 'Today', 
-                        style: TextStyle(color: kWhite.withValues(alpha: 0.2), fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Text('₹${amount.toStringAsFixed(2)}', style: const TextStyle(color: kWhite, fontWeight: FontWeight.w900, fontSize: 16)),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmptyState() {
     return Center(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../config/app_theme.dart';
 import '../models/trip_model.dart';
 import '../services/trip_service.dart';

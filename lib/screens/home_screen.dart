@@ -15,7 +15,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../config/api_config.dart';
 import 'explore_screen.dart';
 import 'saved_trips_screen.dart';
-import 'insights_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;

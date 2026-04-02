@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -116,6 +115,7 @@ class _MemoryVaultScreenState extends State<MemoryVaultScreen> {
 
       if (success) {
         _refreshMemories();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Memory safe in the vault!'), backgroundColor: kTeal, behavior: SnackBarBehavior.floating),
         );

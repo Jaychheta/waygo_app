@@ -90,6 +90,7 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
 
     setState(() => _isCreating = true);
     final userIdStr = await _authService.getUserId();
+    if (!mounted) return;
     if (userIdStr == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to initialize journey. Checking connection...'), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating),

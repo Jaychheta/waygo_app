@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../config/app_theme.dart';
-import '../widgets/glass_container.dart';
 import '../widgets/animated_card.dart';
 
 class ExploreScreen extends StatelessWidget {

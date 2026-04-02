@@ -563,20 +563,3 @@ class _ActivityRailTile extends StatelessWidget {
 }
 
 
-class _StickyDaySelectorDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-  _StickyDaySelectorDelegate({required this.child});
-
-  @override
-  double get minExtent => 74;
-  @override
-  double get maxExtent => 74;
-
-  @override
-  Widget build(BuildContext ctx, double shrinkOffset, bool overlaps) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(covariant _StickyDaySelectorDelegate oldDelegate) => false;
-}
