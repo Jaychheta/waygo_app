@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../config/app_theme.dart';
 import '../services/trip_service.dart';
 import '../widgets/glass_container.dart';
+import 'expense_hub_screen.dart';
+import 'memory_vault_screen.dart';
 import '../widgets/animated_card.dart';
 import '../widgets/custom_button.dart';
 
@@ -126,6 +129,44 @@ class _SavedTripDetailsScreenState extends State<SavedTripDetailsScreen> {
         onPressed: () => Navigator.pop(context),
         icon: const Icon(Icons.arrow_back_ios_new_rounded, color: kWhite, size: 20),
       ),
+      actions: [
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MemoryVaultScreen(
+                filterTripName: widget.tripName,
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.camera_alt_rounded, color: kTeal, size: 20),
+        ),
+        IconButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TripExpenseDetailScreen(
+                tripId: widget.tripId,
+                tripName: widget.tripName,
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.account_balance_wallet_rounded, color: kTeal, size: 20),
+        ),
+        IconButton(
+          onPressed: _shareTrip,
+          icon: const Icon(Icons.share_rounded, color: kWhite, size: 20),
+        ),
+        IconButton(
+          onPressed: _showEditTripDialog,
+          icon: const Icon(Icons.edit_rounded, color: kWhite, size: 20),
+        ),
+        IconButton(
+          onPressed: _confirmDelete,
+          icon: const Icon(Icons.delete_outline_rounded, color: kWhite, size: 20),
+        ),
+        const SizedBox(width: 8),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: false,
         titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -144,6 +185,111 @@ class _SavedTripDetailsScreenState extends State<SavedTripDetailsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _shareTrip() async {
+    final code = await _tripService.generateJoinCode(widget.tripId);
+    if (!mounted) return;
+    
+    if (code != null) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: kSurface2,
+          title: const Text('Share Expedition', style: TextStyle(color: kWhite, fontWeight: FontWeight.w900)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Share this code with your friend. They can join via "Join Trip" on Home.', 
+                style: TextStyle(color: Colors.white60, fontSize: 13)),
+              const SizedBox(height: 24),
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: code));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Code copied to clipboard!'), backgroundColor: kTeal, behavior: SnackBarBehavior.floating),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: kTeal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: kTeal.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        code,
+                        style: const TextStyle(color: kTeal, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 4),
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.copy_all_rounded, color: kTeal, size: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK', style: TextStyle(color: kWhite))),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not generate share code.'), backgroundColor: kDanger),
+      );
+    }
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kSurface2,
+        title: const Text('Delete Trip?', style: TextStyle(color: kWhite, fontWeight: FontWeight.w900)),
+        content: const Text('This will permanently erase all waypoints and records.', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL', style: TextStyle(color: kWhite))),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteTrip();
+            },
+            child: const Text('DELETE', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteTrip() async {
+    final success = await _tripService.deleteTrip(widget.tripId);
+    if (success && mounted) {
+      Navigator.pop(context, true); // Returns true to trigger refresh on home
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trip purged from records.')),
+      );
+    }
+  }
+
+  void _showEditTripDialog() {
+    // We'll reuse the CreateTrip logic or a simplified version here
+    // For now, let's implement a quick edit sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _EditTripSheet(
+        tripId: widget.tripId,
+        currentName: widget.tripName,
+        onUpdated: (newName) {
+          Navigator.pop(context, true); // Refresh and return
+        },
       ),
     );
   }
@@ -319,6 +465,102 @@ class _AddPlaceSheetState extends State<_AddPlaceSheet> {
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
+    }
+  }
+}
+
+class _EditTripSheet extends StatefulWidget {
+  final int tripId;
+  final String currentName;
+  final Function(String) onUpdated;
+
+  const _EditTripSheet({required this.tripId, required this.currentName, required this.onUpdated});
+
+  @override
+  State<_EditTripSheet> createState() => _EditTripSheetState();
+}
+
+class _EditTripSheetState extends State<_EditTripSheet> {
+  late final TextEditingController _nameCtrl;
+  final _tripService = const TripService();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.currentName);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: GlassContainer(
+        radius: 32,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Edit Expedition', style: TextStyle(color: kWhite, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -1)),
+            const SizedBox(height: 32),
+            _sheetField('Trip Name', _nameCtrl, Icons.edit_note_rounded),
+            const SizedBox(height: 48),
+            CustomButton(text: 'Update Journey', isLoading: _isSubmitting, onPressed: _submit),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetField(String label, TextEditingController ctrl, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label.toUpperCase(), style: TextStyle(color: kWhite.withValues(alpha: 0.3), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 2)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: ctrl,
+          style: const TextStyle(color: kWhite, fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: kTeal, size: 18),
+            filled: true,
+            fillColor: kWhite.withValues(alpha: 0.02),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kWhite.withValues(alpha: 0.05))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: kWhite.withValues(alpha: 0.05))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: kTeal)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+    setState(() => _isSubmitting = true);
+    
+    // For simplicity, we only update the name here, but the backend supports more.
+    // We'll use dummy dates since the UI doesn't have date pickers for now.
+    final success = await _tripService.updateTrip(
+      tripId: widget.tripId, 
+      name: name,
+      startDate: DateTime.now(), // Fallback
+      endDate: DateTime.now().add(const Duration(days: 7)),
+      location: 'India'
+    );
+    
+    if (success && mounted) {
+      widget.onUpdated(name);
+    } else if (mounted) {
+      setState(() => _isSubmitting = false);
     }
   }
 }

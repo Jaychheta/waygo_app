@@ -174,4 +174,166 @@ class TripService {
       return false;
     }
   }
+
+  Future<bool> deleteExpense(int expenseId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse("${ApiConfig.baseUrl}/trips/expense/$expenseId"),
+        headers: headers,
+      ).timeout(ApiConfig.requestTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateExpense({
+    required int expenseId,
+    required String title,
+    required double amount,
+    required String category,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.patch(
+        Uri.parse("${ApiConfig.baseUrl}/trips/expense/$expenseId"),
+        headers: headers,
+        body: jsonEncode({
+          "title": title,
+          "amount": amount,
+          "category": category,
+        }),
+      ).timeout(ApiConfig.requestTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getTripMessages(int tripId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse("${ApiConfig.baseUrl}/trips/trip/$tripId/messages"),
+        headers: headers,
+      ).timeout(ApiConfig.requestTimeout);
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> addMessage(int tripId, String message) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/trips/add-message"),
+        headers: headers,
+        body: jsonEncode({
+          "trip_id": tripId,
+          "message": message,
+        }),
+      ).timeout(ApiConfig.requestTimeout);
+      
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+
+  Future<bool> deleteTrip(int tripId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse("${ApiConfig.baseUrl}/trips/$tripId"),
+        headers: headers,
+      ).timeout(ApiConfig.requestTimeout);
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateTrip({
+    required int tripId,
+    required String name,
+    required DateTime startDate,
+    required DateTime endDate,
+    String? location,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse("${ApiConfig.baseUrl}/trips/$tripId"),
+        headers: headers,
+        body: jsonEncode({
+          "name": name,
+          "start_date": startDate.toIso8601String(),
+          "end_date": endDate.toIso8601String(),
+          "location": location ?? "India",
+        }),
+      ).timeout(ApiConfig.requestTimeout);
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<String?> generateJoinCode(int tripId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/trips/$tripId/share"),
+        headers: headers,
+      ).timeout(ApiConfig.requestTimeout);
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['join_code'] as String?;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> getTripMembers(int tripId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse("${ApiConfig.baseUrl}/trips/$tripId/members"),
+        headers: headers,
+      ).timeout(ApiConfig.requestTimeout);
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> joinTrip(String code) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/trips/join"),
+        headers: headers,
+        body: jsonEncode({"join_code": code}),
+      ).timeout(ApiConfig.requestTimeout);
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
 }

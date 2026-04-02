@@ -72,12 +72,17 @@ class _SavedTripsScreenState extends State<SavedTripsScreen> {
 
   Widget _buildTripItem(TripModel trip) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SavedTripDetailsScreen(tripId: trip.id, tripName: trip.name),
-        ),
-      ),
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SavedTripDetailsScreen(tripId: trip.id, tripName: trip.name),
+          ),
+        );
+        if (result == true) {
+          _loadAllTrips();
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 20),
         child: GlassContainer(

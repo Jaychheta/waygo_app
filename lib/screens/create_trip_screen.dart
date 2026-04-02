@@ -30,6 +30,13 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
   int? _newTripId;
 
   @override
+  void initState() {
+    super.initState();
+    _startDate = DateTime.now();
+    _endDate = DateTime.now().add(const Duration(days: 7));
+  }
+
+  @override
   void dispose() {
     _tripNameController.dispose();
     super.dispose();
@@ -48,8 +55,10 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
-      lastDate: DateTime(2035),
+      firstDate: isStart ? DateTime.now() : (_startDate ?? DateTime.now()),
+      lastDate: isStart 
+          ? DateTime.now().add(const Duration(days: 365)) 
+          : (_startDate?.add(const Duration(days: 15)) ?? DateTime.now().add(const Duration(days: 15))),
       builder: (context, child) {
         return Theme(
           data: ThemeData.dark().copyWith(
@@ -203,7 +212,24 @@ class _CreateTripScreenState extends State<CreateTripScreen> {
             CustomButton(
               text: 'Initialize Journey',
               isLoading: _isCreating,
-              onPressed: _createTrip,
+              onPressed: () {
+                if (_startDate != null && _endDate != null) {
+                  final diff = _endDate!.difference(_startDate!).inDays;
+                  if (_endDate!.isBefore(_startDate!)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Return date cannot be before departure!'), backgroundColor: kDanger),
+                    );
+                    return;
+                  }
+                  if (diff > 15) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Maximum trip duration is 15 days!'), backgroundColor: kDanger),
+                    );
+                    return;
+                  }
+                }
+                _createTrip();
+              },
             ).animate().fadeIn(delay: 800.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
           ],
         ),

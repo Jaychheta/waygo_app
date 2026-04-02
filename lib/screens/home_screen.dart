@@ -152,7 +152,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   const SizedBox(height: 32),
                   
                   // Active Trips Section
-                  _sectionHeader('Active Journeys', 'View all'),
+                  _sectionHeader(
+                    'Active Journeys', 
+                    'View all', 
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedTripsScreen())),
+                  ),
                   const SizedBox(height: 16),
                   _buildTripsCarousel(),
 
@@ -202,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     );
   }
 
-  Widget _sectionHeader(String title, String? action) {
+  Widget _sectionHeader(String title, String? action, {VoidCallback? onTap}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -216,12 +220,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           ),
         ),
         if (action != null)
-          Text(
-            action,
-            style: const TextStyle(
-              color: kTeal,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
+              action,
+              style: const TextStyle(
+                color: kTeal,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
       ],
@@ -266,15 +273,20 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     final endDate = trip.endDate.toIso8601String().substring(5, 10);
 
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SavedTripDetailsScreen(
-            tripId: trip.id,
-            tripName: name,
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SavedTripDetailsScreen(
+              tripId: trip.id,
+              tripName: name,
+            ),
           ),
-        ),
-      ),
+        );
+        if (result == true) {
+          _loadTrips();
+        }
+      },
       child: Container(
         width: 260,
         margin: const EdgeInsets.only(right: 20),
@@ -428,9 +440,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   Widget _buildStaggeredActions() {
     final actions = [
       {'icon': Icons.add_rounded, 'label': 'New Trip', 'color': kTeal, 'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTripScreen()))},
+      {'icon': Icons.group_add_rounded, 'label': 'Join Trip', 'color': const Color(0xFF00E5FF), 'onTap': _showJoinTripDialog},
       {'icon': Icons.map_rounded, 'label': 'Explore', 'color': Colors.blueAccent, 'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExploreScreen()))},
       {'icon': Icons.bookmark_rounded, 'label': 'Saved', 'color': Colors.amber, 'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedTripsScreen()))},
-      {'icon': Icons.insights_rounded, 'label': 'Insights', 'color': Colors.purpleAccent, 'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InsightsScreen()))},
     ];
 
     return MasonryGridView.count(
@@ -490,6 +502,60 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             'Your upcoming adventures will appear here.',
             textAlign: TextAlign.center,
             style: TextStyle(color: kWhite.withValues(alpha: 0.4)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJoinTripDialog() {
+    final codeController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: kSurface2,
+        title: const Text('Join Expedition', style: TextStyle(color: kWhite, fontWeight: FontWeight.w900)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the secret code shared by your friend to join their journey.', 
+              style: TextStyle(color: Colors.white60, fontSize: 13)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: codeController,
+              style: const TextStyle(color: kWhite, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'CODE e.g. XJ92LK',
+                hintStyle: TextStyle(color: kWhite.withValues(alpha: 0.2)),
+                filled: true,
+                fillColor: kWhite.withValues(alpha: 0.05),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+              textCapitalization: TextCapitalization.characters,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL', style: TextStyle(color: kWhite))),
+          TextButton(
+            onPressed: () async {
+              final code = codeController.text.trim();
+              if (code.isEmpty) return;
+              Navigator.pop(ctx);
+              
+              final success = await const TripService().joinTrip(code);
+              if (success && mounted) {
+                _loadTrips();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Welcome to the expedition!'), backgroundColor: kTeal),
+                );
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invalid code or session busy.'), backgroundColor: kDanger),
+                );
+              }
+            },
+            child: const Text('JOIN', style: TextStyle(color: kTeal, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
